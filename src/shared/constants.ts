@@ -3,6 +3,16 @@ import type { GameConfig } from './types';
 // 预定义的游戏列表
 export const GAMES: GameConfig[] = [
   {
+    id: 'infinitynikki',
+    name: '无限暖暖',
+    icon: '👗',
+    defaultPaths: {
+      windows: 'D:\\Program Files\\InfinityNikki\\InfinityNikki\\X6Game\\ScreenShot',
+      mac: undefined
+    },
+    description: '无限暖暖截图保存在游戏安装目录的 X6Game\\ScreenShot 文件夹中'
+  },
+  {
     id: 'genshin',
     name: '原神',
     icon: '🎮',

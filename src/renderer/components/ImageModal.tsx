@@ -1,6 +1,21 @@
 import { useEffect, useCallback } from 'react';
 import type { ImageInfo } from '../../shared/types';
 
+// 将 Windows 路径转换为 local-file:// URL
+const pathToLocalFileUrl = (filePath: string): string => {
+  // 将反斜杠转为正斜杠，并对路径进行 URL 编码（但保留斜杠和冒号）
+  const normalized = filePath.replace(/\\/g, '/');
+  // 编码每个路径段，保留 / 和 :
+  const encoded = normalized.split('/').map((segment, index) => {
+    // 第一段可能是驱动器号如 "D:"，不需要编码冒号
+    if (index === 0 && segment.includes(':')) {
+      return segment;
+    }
+    return encodeURIComponent(segment);
+  }).join('/');
+  return `local-file:///${encoded}`;
+};
+
 interface ImageModalProps {
   image: ImageInfo;
   onClose: () => void;
@@ -57,7 +72,7 @@ export function ImageModal({
         {/* 图片 */}
         <div className="max-w-[90vw] max-h-[80vh] overflow-hidden">
           <img
-            src={`file://${image.path}`}
+            src={pathToLocalFileUrl(image.path)}
             alt={image.name}
             className="w-full h-full object-contain"
           />

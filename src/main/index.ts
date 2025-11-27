@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'electron';
 import { join } from 'path';
+import { pathToFileURL } from 'url';
 import { imageScanner } from './services/imageScanner';
 import { wallpaperService } from './services/wallpaperService';
 import { directoryWatcher } from './services/directoryWatcher';
 import { storageService } from './services/storageService';
 import { thumbnailService } from './services/thumbnailService';
+import { logService } from './services/logService';
 
 // 确保只运行一个实例
 const gotTheLock = app.requestSingleInstanceLock();
@@ -14,7 +16,22 @@ if (!gotTheLock) {
 } else {
   let mainWindow: BrowserWindow | null = null;
 
+  // 注册自定义协议用于加载本地图片
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'local-file',
+      privileges: {
+        secure: true,
+        supportFetchAPI: true,
+        bypassCSP: true,
+        stream: true
+      }
+    }
+  ]);
+
   const createWindow = () => {
+    logService.info('创建主窗口');
+    
     mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -24,7 +41,8 @@ if (!gotTheLock) {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false
+        sandbox: false,
+        webSecurity: true
       },
       titleBarStyle: 'hiddenInset',
       backgroundColor: '#0d1117',
@@ -66,7 +84,10 @@ if (!gotTheLock) {
 
     // 设置壁纸
     ipcMain.handle('ipc/setWallpaper', async (_, { filePath }: { filePath: string }) => {
-      return await wallpaperService.setWallpaper(filePath);
+      logService.info('收到设置壁纸请求', { filePath });
+      const result = await wallpaperService.setWallpaper(filePath);
+      logService.info('设置壁纸结果', result);
+      return result;
     });
 
     // 监听目录
@@ -124,6 +145,22 @@ if (!gotTheLock) {
   };
 
   app.whenReady().then(() => {
+    logService.info('应用启动', { 
+      version: app.getVersion(),
+      platform: process.platform,
+      logPath: logService.getLogPath()
+    });
+    
+    // 注册自定义协议处理器，用于安全加载本地图片
+    protocol.handle('local-file', (request) => {
+      // 从 URL 中提取文件路径
+      // URL 格式: local-file:///D:/path/to/file.jpg
+      const url = request.url.replace('local-file:///', '');
+      const decodedPath = decodeURIComponent(url);
+      logService.debug('加载本地文件', { url: request.url, decodedPath });
+      return net.fetch(pathToFileURL(decodedPath).href);
+    });
+    
     registerIpcHandlers();
     createWindow();
 
@@ -135,6 +172,7 @@ if (!gotTheLock) {
   });
 
   app.on('window-all-closed', () => {
+    logService.info('所有窗口已关闭');
     directoryWatcher.stop();
     if (process.platform !== 'darwin') {
       app.quit();

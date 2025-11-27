@@ -1,5 +1,20 @@
 import type { ImageInfo } from '../../shared/types';
 
+// 将 Windows 路径转换为 local-file:// URL
+const pathToLocalFileUrl = (filePath: string): string => {
+  // 将反斜杠转为正斜杠，并对路径进行 URL 编码（但保留斜杠和冒号）
+  const normalized = filePath.replace(/\\/g, '/');
+  // 编码每个路径段，保留 / 和 :
+  const encoded = normalized.split('/').map((segment, index) => {
+    // 第一段可能是驱动器号如 "D:"，不需要编码冒号
+    if (index === 0 && segment.includes(':')) {
+      return segment;
+    }
+    return encodeURIComponent(segment);
+  }).join('/');
+  return `local-file:///${encoded}`;
+};
+
 interface ImageGridProps {
   images: ImageInfo[];
   favorites: string[];
@@ -26,7 +41,7 @@ export function ImageGrid({
         >
           {/* 图片 */}
           <img
-            src={image.thumbnail || `file://${image.path}`}
+            src={image.thumbnail || pathToLocalFileUrl(image.path)}
             alt={image.name}
             loading="lazy"
           />
