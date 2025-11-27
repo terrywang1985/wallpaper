@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --dark-bg: #0d1117;
+  --dark-surface: #161b22;
+  --dark-border: #30363d;
+  --dark-text: #c9d1d9;
+  --dark-text-secondary: #8b949e;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dark-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-text-secondary);
+}
+
+/* 拖动区域 */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 图片网格 */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+/* 图片卡片悬停效果 */
+.image-card {
+  @apply relative overflow-hidden rounded-lg cursor-pointer transition-all duration-200;
+  @apply border border-dark-border hover:border-accent;
+  @apply bg-dark-surface;
+}
+
+.image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.image-card img {
+  @apply w-full h-48 object-cover;
+}
+
+.image-card .overlay {
+  @apply absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-200;
+  @apply flex items-center justify-center;
+}
+
+.image-card:hover .overlay {
+  @apply opacity-100;
+}
+
+/* 按钮样式 */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-dark-bg;
+}
+
+.btn-primary {
+  @apply bg-accent text-white hover:bg-accent-hover;
+}
+
+.btn-secondary {
+  @apply bg-dark-surface border border-dark-border text-dark-text hover:bg-dark-border;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface;
+}
+
+/* 侧边栏 */
+.sidebar {
+  @apply w-64 h-full bg-dark-surface border-r border-dark-border;
+  @apply flex flex-col;
+}
+
+.sidebar-item {
+  @apply flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200;
+  @apply text-dark-text-secondary hover:text-dark-text hover:bg-dark-border/50;
+}
+
+.sidebar-item.active {
+  @apply text-accent bg-accent/10 border-r-2 border-accent;
+}
+
+/* 预览面板 */
+.preview-panel {
+  @apply w-80 h-full bg-dark-surface border-l border-dark-border;
+  @apply flex flex-col;
+}
+
+/* 模态框 */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/80 flex items-center justify-center z-50;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-content {
+  @apply bg-dark-surface rounded-xl border border-dark-border shadow-2xl;
+  @apply max-w-4xl max-h-[90vh] overflow-hidden;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Toast 通知 */
+.toast {
+  @apply fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg;
+  @apply flex items-center gap-2;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-success {
+  @apply bg-green-600 text-white;
+}
+
+.toast-error {
+  @apply bg-red-600 text-white;
+}
+
+.toast-info {
+  @apply bg-accent text-white;
+}
