@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ImageGrid } from './components/ImageGrid';
 import { PreviewPanel } from './components/PreviewPanel';
-import { ImageModal } from './components/ImageModal';
 import { Toast, ToastType } from './components/Toast';
 import { GAMES } from '../shared/constants';
 import type { GameConfig, ImageInfo } from '../shared/types';
@@ -13,7 +12,6 @@ function App() {
   const [currentDirectory, setCurrentDirectory] = useState<string | null>(null);
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [selectedImage, setSelectedImage] = useState<ImageInfo | null>(null);
-  const [modalImage, setModalImage] = useState<ImageInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -56,18 +54,42 @@ function App() {
   }, []);
 
   // 选择游戏
-  const handleSelectGame = (game: GameConfig) => {
+  const handleSelectGame = async (game: GameConfig) => {
     setSelectedGame(game);
     setCurrentDirectory(null);
     setImages([]);
     setSelectedImage(null);
+    
+    // 首先尝试加载上次保存的目录
+    const savedDirectory = await window.electronAPI.getDirectory(game.id);
+    if (savedDirectory) {
+      setCurrentDirectory(savedDirectory);
+      await scanDirectory(savedDirectory);
+      return;
+    }
+    
+    // 如果没有保存的目录，尝试自动检测默认路径
+    const defaultPaths = game.defaultPaths?.windows;
+    if (defaultPaths && defaultPaths.length > 0) {
+      const result = await window.electronAPI.detectGameDirectory(defaultPaths);
+      if (result.found && result.path) {
+        setCurrentDirectory(result.path);
+        // 保存检测到的目录
+        await window.electronAPI.setDirectory(game.id, result.path);
+        await scanDirectory(result.path);
+        showToast(`自动找到 ${game.name} 截图目录`, 'success');
+        return;
+      }
+    }
   };
 
   // 选择目录
   const handleChooseDirectory = async () => {
     const directory = await window.electronAPI.chooseDirectory();
-    if (directory) {
+    if (directory && selectedGame) {
       setCurrentDirectory(directory);
+      // 保存选择的目录
+      await window.electronAPI.setDirectory(selectedGame.id, directory);
       await scanDirectory(directory);
     }
   };
@@ -135,6 +157,14 @@ function App() {
     await window.electronAPI.showInFolder(image.path);
   };
 
+  // 复制路径到剪贴板
+  const handleCopyPath = async () => {
+    if (currentDirectory) {
+      await window.electronAPI.copyToClipboard(currentDirectory);
+      showToast('路径已复制到剪贴板', 'success');
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-dark-bg">
       {/* 侧边栏 - 游戏列表 */}
@@ -154,9 +184,18 @@ function App() {
                 <span className="text-lg">{selectedGame.icon}</span>
                 <h1 className="text-lg font-semibold">{selectedGame.name}</h1>
                 {currentDirectory && (
-                  <span className="text-sm text-dark-text-secondary truncate max-w-xs">
-                    {currentDirectory}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-dark-text-secondary truncate max-w-xs" title={currentDirectory}>
+                      {currentDirectory}
+                    </span>
+                    <button
+                      onClick={handleCopyPath}
+                      className="text-dark-text-secondary hover:text-dark-text transition-colors"
+                      title="复制路径"
+                    >
+                      📋
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -191,10 +230,13 @@ function App() {
                   <div className="text-6xl mb-4">{selectedGame.icon}</div>
                   <h2 className="text-xl font-semibold mb-2">{selectedGame.name}</h2>
                   <p className="text-dark-text-secondary mb-4">{selectedGame.description}</p>
-                  {selectedGame.defaultPaths.windows && (
+                  {selectedGame.defaultPaths.windows && selectedGame.defaultPaths.windows.length > 0 && (
                     <p className="text-sm text-dark-text-secondary mb-4 bg-dark-surface p-3 rounded-lg border border-dark-border">
-                      <span className="block mb-1">💡 通常位置：</span>
-                      <code className="text-xs break-all">{selectedGame.defaultPaths.windows}</code>
+                      <span className="block mb-1">💡 正在检测常见位置...</span>
+                      <code className="text-xs break-all">{selectedGame.defaultPaths.windows[0]}</code>
+                      {selectedGame.defaultPaths.windows.length > 1 && (
+                        <span className="block text-xs mt-1">等 {selectedGame.defaultPaths.windows.length} 个可能位置</span>
+                      )}
                     </p>
                   )}
                   <button onClick={handleChooseDirectory} className="btn btn-primary">
@@ -226,7 +268,6 @@ function App() {
                 favorites={favorites}
                 selectedImage={selectedImage}
                 onSelectImage={setSelectedImage}
-                onDoubleClick={setModalImage}
               />
             )}
           </div>
@@ -244,17 +285,6 @@ function App() {
           )}
         </div>
       </main>
-
-      {/* 大图预览模态框 */}
-      {modalImage && (
-        <ImageModal
-          image={modalImage}
-          onClose={() => setModalImage(null)}
-          onSetWallpaper={() => handleSetWallpaper(modalImage)}
-          onToggleFavorite={() => handleToggleFavorite(modalImage)}
-          isFavorite={favorites.includes(modalImage.path)}
-        />
-      )}
 
       {/* Toast 通知 */}
       {toast && <Toast message={toast.message} type={toast.type} />}

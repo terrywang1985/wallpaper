@@ -1,12 +1,30 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, Menu } from 'electron';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
+import { existsSync } from 'fs';
 import { imageScanner } from './services/imageScanner';
 import { wallpaperService } from './services/wallpaperService';
 import { directoryWatcher } from './services/directoryWatcher';
 import { storageService } from './services/storageService';
 import { thumbnailService } from './services/thumbnailService';
 import { logService } from './services/logService';
+
+// 扩展环境变量并检测目录是否存在
+const expandEnvVariables = (path: string): string => {
+  return path.replace(/%([^%]+)%/g, (_, key) => process.env[key] || '');
+};
+
+const detectExistingDirectory = (paths: string[]): string | null => {
+  for (const rawPath of paths) {
+    const expandedPath = expandEnvVariables(rawPath);
+    logService.debug('检查目录是否存在', { rawPath, expandedPath });
+    if (existsSync(expandedPath)) {
+      logService.info('找到有效目录', { path: expandedPath });
+      return expandedPath;
+    }
+  }
+  return null;
+};
 
 // 确保只运行一个实例
 const gotTheLock = app.requestSingleInstanceLock();
@@ -32,11 +50,15 @@ if (!gotTheLock) {
   const createWindow = () => {
     logService.info('创建主窗口');
     
+    // 移除默认菜单栏
+    Menu.setApplicationMenu(null);
+    
     mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
       minWidth: 1000,
       minHeight: 700,
+      autoHideMenuBar: true,
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
@@ -140,6 +162,30 @@ if (!gotTheLock) {
     // 在文件管理器中显示
     ipcMain.handle('ipc/showInFolder', async (_, { filePath }: { filePath: string }) => {
       shell.showItemInFolder(filePath);
+      return { success: true };
+    });
+
+    // 获取游戏保存的目录
+    ipcMain.handle('ipc/getDirectory', async (_, { gameId }: { gameId: string }) => {
+      return storageService.getDirectory(gameId);
+    });
+
+    // 保存游戏目录
+    ipcMain.handle('ipc/setDirectory', async (_, { gameId, directory }: { gameId: string; directory: string }) => {
+      storageService.setDirectory(gameId, directory);
+      return { success: true };
+    });
+
+    // 自动检测游戏目录
+    ipcMain.handle('ipc/detectGameDirectory', async (_, { paths }: { paths: string[] }) => {
+      const foundPath = detectExistingDirectory(paths);
+      return { found: foundPath !== null, path: foundPath };
+    });
+
+    // 复制文本到剪贴板
+    ipcMain.handle('ipc/copyToClipboard', async (_, { text }: { text: string }) => {
+      const { clipboard } = await import('electron');
+      clipboard.writeText(text);
       return { success: true };
     });
   };

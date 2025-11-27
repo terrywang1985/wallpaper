@@ -20,7 +20,6 @@ interface ImageGridProps {
   favorites: string[];
   selectedImage: ImageInfo | null;
   onSelectImage: (image: ImageInfo) => void;
-  onDoubleClick: (image: ImageInfo) => void;
 }
 
 export function ImageGrid({
@@ -28,7 +27,6 @@ export function ImageGrid({
   favorites,
   selectedImage,
   onSelectImage,
-  onDoubleClick,
 }: ImageGridProps) {
   return (
     <div className="image-grid">
@@ -37,7 +35,6 @@ export function ImageGrid({
           key={image.path}
           className={`image-card ${selectedImage?.path === image.path ? 'ring-2 ring-accent' : ''}`}
           onClick={() => onSelectImage(image)}
-          onDoubleClick={() => onDoubleClick(image)}
         >
           {/* 图片 */}
           <img
@@ -57,7 +54,7 @@ export function ImageGrid({
           <div className="overlay">
             <div className="text-center">
               <span className="text-4xl">🔍</span>
-              <p className="text-sm mt-2">点击选择 / 双击预览</p>
+              <p className="text-sm mt-2">点击选择查看详情</p>
             </div>
           </div>
 

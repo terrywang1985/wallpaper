@@ -61,8 +61,8 @@ export interface GameConfig {
   name: string;
   icon: string;
   defaultPaths: {
-    windows?: string;
-    mac?: string;
+    windows?: string[];  // 改为数组，支持多个可能的路径
+    mac?: string[];
   };
   description: string;
 }
